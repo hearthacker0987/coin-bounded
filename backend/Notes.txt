@@ -1,0 +1,218 @@
+1. First of all create new repository in github and copy the link and past in your cmd like (git clone https:github....)
+
+2. and then open Vs Code in that folder which is created and run command npm init -y 
+
+3. intall express using (npm i express)
+
+4. make file with name server.js 
+
+const express = require('express');
+
+const app = express();
+
+const port = 5000;
+
+app.get('/',(req,res) => res.json({msg: "Hello World!"}))
+
+app.listen(port,console.log(`Backend is running on port: ${port}`));
+
+for run this file (node server.js) command
+
+5. install nodemon third party pkg for the prevention of again refresh when changing is done 
+   cmd (npm i D- nodemon)  -D for dev dependency its only use for development process 
+add this scripts inside the pakage.json file 
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+
+and run command (npm run dev) for develping process (npm run start) for deploy our website
+
+6. install mongoose
+mongoose is a ORM (Object Relational Model) its help to communicate with the mongodb 
+is main humhy mongodb ka specific sentence likhny ki zrort nhi hoti hum regular javascript sy km krty hain 
+its give us security for data validation 
+command (npm i mongoose)
+
+7. Go to mongo atlas website copy your connection string which is like (mongodb+srv://moin:<password>@cluster0.wbiil8f.mongodb.net/?retryWrites=true&w=majority)
+make sure to change the string enter password and database name before ? sign like (mongodb+srv://moin:moin1234@cluster0.wbiil8f.mongodb.net/databaseName?retryWrites=true&w=majority)
+
+8. Make the folder inside your parent directory name like (Database) and make file in it name like (index.js)
+	open the file and write this code 
+
+const mongoose = require('mongoose')
+
+const CONNECTION_STRING = "mongodb+srv://moin:moin1234@cluster0.wbiil8f.mongodb.net/coin-bounce?retryWrites=true&w=majority";
+
+const dbConnect = async () => {
+
+
+    try{
+        const conn  = await mongoose.connect(CONNECTION_STRING);
+        console.log(`Database is connected to host: ${conn.connection.host}`)
+    }
+    catch(error){
+        console.log(`Error: ${error}`)
+    }
+
+}
+
+module.exports = dbConnect
+
+9. then import this file inside the server.js and call the function like 
+
+const dbConnect = require('./database/index');
+dbConnect();
+
+10. Clean of code its a good practice for security purpose using .env approach 
+
+install package name is dotenv command: (npm i dotenv)
+make file in parent folder name as (.env)
+
+inside the .env file write this environment variables
+PORT = 5000
+CONNECTION_STRING = "mongodb+srv://moin:moin1234@cluster0.wbiil8f.mongodb.net/coin-bounce?retryWrites=true&w=majority"
+
+then make folder in parent directory name as (config) inside this folder make index.js file and write this code 
+
+const dotenv = require('dotenv').config();
+
+const PORT = process.env.PORT
+
+const CONNECTION_STRING = process.env.CONNECTION_STRING
+
+module.exports = {
+    PORT,
+    CONNECTION_STRING
+}
+
+last step is imort this file and used this env variables using destructuring concept like
+
+const {CONNECTION_STRING} = require('../config/index') and used the connectionString variable
+
+cool now our username,password and port is not expose its hiden form.
+
+11. Make Models 
+
+  . create the models name folder in the parent folder and make inside model files like (blog.js,user.js,comment.js)
+and write this code in each file like this
+
+const mongoose = require('mongoose')
+
+const {Schema} = mongoose
+
+const userSchema = new Schema({
+    name : {type: String, required: true},
+    username: {type: String, required: true},
+    email: {type: String, required: true},
+    password: {type:String, required:true},
+},{
+    timestamps: true
+})
+
+module.exports = mongoose.model('User',userSchema,'users')  
+
+first parameter of your model name jis name sy ap isko import krogy , second parameter of your schema
+third parameter of your collection name into mongodb database
+
+schema is simply like validation 
+
+
+12. Make Routes
+    
+    * Create routes folder in parent directory then create injex.js file in it
+    * Open that injex.js file and write this code 
+
+    const express = require('express')
+    const router = express.Router();
+    const authController = require('../controller/authController')
+
+    // testing
+    router.get('/testing',(req,res) => res.json({message: "Testing Route is running"}))
+    module.exports = router;
+
+13. Make Controller 
+    
+    * Create controller folder in parent directory then create authController.js file in it 
+    * open authController file and create register and login function in authController object 
+    
+    const authController = {
+        async login(){},
+        async register(){}
+    }
+    module.exports = authController
+
+    then those function used in routes files like this 
+
+    router.post('/register', authController.register)
+    router.post('/login',authController.login)
+
+    when user go to the /register route the authController run the register function which is define inside the authController
+
+
+14. Write Register or Login Logic inside authController
+
+    * Install Joi Command (npm i joi)
+        What is Joi ? 
+        -> (The most powerfull Schema description language and data validator for javascript)  
+    * import Joi inside authController
+
+15. Make Middleware for ErrorHandling
+
+    * Create folder controller in parent directory then create errorHandler.js file in it
+    * open that file and import Joi with the destructuring with name ValidationError
+    copy this code 
+
+    const {ValidationError} = require('joi');
+
+    const errorHandler = (error,req,res,next ) => {
+
+        // default error 
+        const status = 500;
+        const data = {
+            message : "Internal Server Error"
+        }
+
+        if (error instanceof ValidationError){
+            status = 422;
+            data.message = error.message
+
+            return res.status(status).json(data)
+        }
+
+        if(error.status){
+            status = error.status
+        }
+
+        if(error.message){
+            data.message = error.message
+        }
+
+        return res.status(status).json(data);
+    }
+
+    module.exports = errorHandler
+
+    Then, register your errorHandler Middleware in main Server.js file at the end
+    * import errorHandler middleware 
+    * at the end write ( app.use(errorHandler); )
+
+    Your middleware of errorHandler is successfully created and used 
+
+
+16. Create Register Logic  (in authController register function)
+    1. Validate user input
+    
+        const userRegisterValidateSchema = Joi.object({
+            username: Joi.string().min(3).max(40).required(),
+            name: Joi.string().required(),
+            email: Joi.string().email().required(),
+            password: Joi.string().required().pattern(passwordPattern),
+            confirmPassword: Joi.ref('password')
+        });
+
+        const {error} = userRegisterValidateSchema.validate(req.body)
+
+        if(error){
+            return next(error)
+        }  
+
+ 
